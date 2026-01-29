@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +54,9 @@ const products = [
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Все');
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', subject: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
 
   const categories = ['Все', 'Материалы', 'Инженерия', 'Услуги'];
 
@@ -63,6 +66,33 @@ const Index = () => {
     const matchesCategory = activeCategory === 'Все' || product.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitMessage('');
+
+    try {
+      const response = await fetch('https://functions.poehali.dev/1945b397-82a7-4b0b-8741-066d0bb59907', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubmitMessage(data.message || 'Заявка успешно отправлена!');
+        setFormData({ name: '', phone: '', email: '', subject: '' });
+      } else {
+        setSubmitMessage(data.error || 'Ошибка отправки заявки');
+      }
+    } catch (error) {
+      setSubmitMessage('Ошибка соединения с сервером');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -304,20 +334,47 @@ const Index = () => {
                 <CardDescription>Мы свяжемся с вами в ближайшее время</CardDescription>
               </CardHeader>
               <CardContent>
-                <form className="space-y-4">
+                <form className="space-y-4" onSubmit={handleSubmit}>
                   <div>
-                    <Input placeholder="Ваше имя" />
+                    <Input 
+                      placeholder="Ваше имя" 
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      required
+                    />
                   </div>
                   <div>
-                    <Input type="tel" placeholder="Телефон" />
+                    <Input 
+                      type="tel" 
+                      placeholder="Телефон" 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      required
+                    />
                   </div>
                   <div>
-                    <Input type="email" placeholder="Email" />
+                    <Input 
+                      type="email" 
+                      placeholder="Email" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
                   </div>
                   <div>
-                    <Input placeholder="Тема обращения" />
+                    <Input 
+                      placeholder="Тема обращения" 
+                      value={formData.subject}
+                      onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                    />
                   </div>
-                  <Button className="w-full">Отправить заявку</Button>
+                  {submitMessage && (
+                    <div className={`text-sm p-3 rounded-md ${submitMessage.includes('успешно') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {submitMessage}
+                    </div>
+                  )}
+                  <Button className="w-full" type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Отправка...' : 'Отправить заявку'}
+                  </Button>
                 </form>
               </CardContent>
             </Card>
